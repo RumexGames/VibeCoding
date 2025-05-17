@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MailFix mit CORS-Proxy</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    .tabs { margin-bottom: 1rem; }
+    .tabs button {
+      padding: 0.5rem 1rem; margin-right: 0.5rem;
+      border: 1px solid #ccc; border-radius: 4px;
+      background: #f9f9f9; cursor: pointer;
+    }
+    .tab-content { display: none; margin-top: 1rem; }
+    .tab-content.active { display: block; }
+    textarea, select, input[type="text"] {
+      width: 100%; padding: 0.5rem; margin-bottom: 0.5rem;
+      border: 1px solid #ccc; border-radius: 4px;
+    }
+    button.generate {
+      padding: 0.5rem 1rem; border: none;
+      border-radius: 4px; background: #007bff;
+      color: white; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="tabs">
+    <button id="tab-compose">E-Mail verfassen</button>
+    <button id="tab-summary">E-Mail zusammenfassen</button>
+  </div>
+
+  <!-- Tab 1: E-Mail verfassen -->
+  <div id="compose" class="tab-content">
+    <h2>E-Mail verfassen</h2>
+    <textarea id="raw-input" rows="6" placeholder="Geben Sie hier Ihren Entwurf ein..."></textarea>
+    <select id="style-select">
+      <option value="freundlich">Freundlich</option>
+      <option value="formell">Formell</option>
+      <option value="locker">Locker</option>
+    </select>
+    <button id="generate-btn" class="generate">Generieren</button>
+    <textarea id="output-email" rows="6" readonly placeholder="Hier erscheint der generierte Text..."></textarea>
+  </div>
+
+  <!-- Tab 2: E-Mail zusammenfassen -->
+  <div id="summary" class="tab-content">
+    <h2>E-Mail zusammenfassen</h2>
+    <textarea id="email-input" rows="8" placeholder="Fügen Sie hier den E-Mail-Text ein..."></textarea>
+    <button id="summarize-btn" class="generate">Zusammenfassen</button>
+    <textarea id="summary-output" rows="4" readonly placeholder="Ihre Zusammenfassung..."></textarea>
+  </div>
+
+  <script>
+    // Tab-Navigation
+    const tabs = { 'tab-compose':'compose', 'tab-summary':'summary' };
+    for (let tabId in tabs) {
+      document.getElementById(tabId).addEventListener('click', () => {
+        document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+        document.getElementById(tabs[tabId]).classList.add('active');
+      });
+    }
+    document.getElementById('tab-compose').click();
+
+    // Ollama-Aufruf über unseren Proxy-Endpunkt /api/ollama
+    async function callOllama(messages) {
+      const res = await fetch('/api/ollama', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          model: 'llama3.2:latest',
+          messages
+        })
+      });
+      if (!res.ok) throw new Error(`Server antwortete mit ${res.status}`);
+      const data = await res.json();
+      return data.choices[0].message.content;
+    }
+
+    // Generieren
+    document.getElementById('generate-btn').addEventListener('click', async () => {
+      const raw = document.getElementById('raw-input').value.trim();
+      if (!raw) return alert('Bitte Entwurf eingeben.');
+      const style = document.getElementById('style-select').value;
+      try {
+        const out = await callOllama([
+          { role:'system', content:`Formuliere basierend auf den Stichpunkten eine ${style} E-Mail.` },
+          { role:'user', content: raw }
+        ]);
+        document.getElementById('output-email').value = out;
+      } catch(e) {
+        alert('Fehler: ' + e.message);
+      }
+    });
+
+    // Zusammenfassen
+    document.getElementById('summarize-btn').addEventListener('click', async () => {
+      const txt = document.getElementById('email-input').value.trim();
+      if (!txt) return alert('Bitte E-Mail-Text eingeben.');
+      try {
+        const out = await callOllama([
+          { role:'system', content:'Fasse diese E-Mail prägnant zusammen:' },
+          { role:'user', content: txt }
+        ]);
+        document.getElementById('summary-output').value = out;
+      } catch(e) {
+        alert('Fehler: ' + e.message);
+      }
+    });
+  </script>
+</body>
+</html>
+
