@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>MailFix mit CORS-Proxy</title>
+  <title>MailFix with CORS Proxy</title>
   <style>
     body { font-family: sans-serif; margin: 2rem; }
     .tabs { margin-bottom: 1rem; }
@@ -28,88 +28,89 @@
 <body>
 
   <div class="tabs">
-    <button id="tab-compose">E-Mail verfassen</button>
-    <button id="tab-summary">E-Mail zusammenfassen</button>
+    <button id="tab-compose">Compose Email</button>
+    <button id="tab-summary">Summarize Email</button>
   </div>
 
-  <!-- Tab 1: E-Mail verfassen -->
+  <!-- Tab 1: Compose Email -->
   <div id="compose" class="tab-content">
-    <h2>E-Mail verfassen</h2>
-    <textarea id="raw-input" rows="6" placeholder="Geben Sie hier Ihren Entwurf ein..."></textarea>
+    <h2>Compose Email</h2>
+    <textarea id="raw-input" rows="6" placeholder="Enter your draft here..."></textarea>
     <select id="style-select">
-      <option value="freundlich">Freundlich</option>
-      <option value="formell">Formell</option>
-      <option value="locker">Locker</option>
+      <option value="friendly">Friendly</option>
+      <option value="formal">Formal</option>
+      <option value="casual">Casual</option>
+      <option value="aggressive">Aggressive</option>
+      <option value="depressive">Depressive</option>
+      <option value="Edgelord">Edgelord</option>
+      <option value="Pirate">Pirate</option>
     </select>
-    <button id="generate-btn" class="generate">Generieren</button>
-    <textarea id="output-email" rows="6" readonly placeholder="Hier erscheint der generierte Text..."></textarea>
+    <button id="generate-btn" class="generate">Generate</button>
+    <textarea id="output-email" rows="6" readonly placeholder="The generated text will appear here..."></textarea>
   </div>
 
-  <!-- Tab 2: E-Mail zusammenfassen -->
+  <!-- Tab 2: Summarize Email -->
   <div id="summary" class="tab-content">
-    <h2>E-Mail zusammenfassen</h2>
-    <textarea id="email-input" rows="8" placeholder="Fügen Sie hier den E-Mail-Text ein..."></textarea>
-    <button id="summarize-btn" class="generate">Zusammenfassen</button>
-    <textarea id="summary-output" rows="4" readonly placeholder="Ihre Zusammenfassung..."></textarea>
+    <h2>Summarize Email</h2>
+    <textarea id="email-input" rows="8" placeholder="Paste the email text here..."></textarea>
+    <button id="summarize-btn" class="generate">Summarize</button>
+    <textarea id="summary-output" rows="4" readonly placeholder="Your summary..."></textarea>
   </div>
 
   <script>
-    // Tab-Navigation
+    // Tab navigation
     const tabs = { 'tab-compose':'compose', 'tab-summary':'summary' };
     for (let tabId in tabs) {
       document.getElementById(tabId).addEventListener('click', () => {
-        document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         document.getElementById(tabs[tabId]).classList.add('active');
       });
     }
     document.getElementById('tab-compose').click();
 
-    // Ollama-Aufruf über unseren Proxy-Endpunkt /api/ollama
+    // Call to local backend proxy
     async function callOllama(messages) {
-      const res = await fetch('/api/ollama', {
+      const res = await fetch('http://localhost:3000/api/chat', {
         method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-          model: 'llama3.2:latest',
-          messages
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'llama3.2:latest', messages })
       });
-      if (!res.ok) throw new Error(`Server antwortete mit ${res.status}`);
+
+      if (!res.ok) throw new Error(`Proxy responded with ${res.status}`);
       const data = await res.json();
-      return data.choices[0].message.content;
+      return data.content;
     }
 
-    // Generieren
+    // Generate email
     document.getElementById('generate-btn').addEventListener('click', async () => {
       const raw = document.getElementById('raw-input').value.trim();
-      if (!raw) return alert('Bitte Entwurf eingeben.');
+      if (!raw) return alert('Please enter a draft.');
       const style = document.getElementById('style-select').value;
       try {
         const out = await callOllama([
-          { role:'system', content:`Formuliere basierend auf den Stichpunkten eine ${style} E-Mail.` },
-          { role:'user', content: raw }
+          { role: 'system', content: `Formulate an email in a ${style} style based on the bullet points. Reply ONLY with the email.` },
+          { role: 'user', content: raw }
         ]);
         document.getElementById('output-email').value = out;
       } catch(e) {
-        alert('Fehler: ' + e.message);
+        alert('Error: ' + e.message);
       }
     });
 
-    // Zusammenfassen
+    // Summarize email
     document.getElementById('summarize-btn').addEventListener('click', async () => {
       const txt = document.getElementById('email-input').value.trim();
-      if (!txt) return alert('Bitte E-Mail-Text eingeben.');
+      if (!txt) return alert('Please enter the email text.');
       try {
         const out = await callOllama([
-          { role:'system', content:'Fasse diese E-Mail prägnant zusammen:' },
-          { role:'user', content: txt }
+          { role: 'system', content: 'Summarize this email concisely:' },
+          { role: 'user', content: txt }
         ]);
         document.getElementById('summary-output').value = out;
       } catch(e) {
-        alert('Fehler: ' + e.message);
+        alert('Error: ' + e.message);
       }
     });
   </script>
 </body>
 </html>
-
