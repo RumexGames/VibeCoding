@@ -66,7 +66,7 @@
 
     // Ollama-Aufruf über unseren Proxy-Endpunkt /api/ollama
     async function callOllama(messages) {
-      const res = await fetch('/api/ollama', {
+      const res = await fetch('http://141.69.58.30:11434/v1/chat/', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({
