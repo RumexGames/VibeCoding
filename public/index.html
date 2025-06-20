@@ -70,7 +70,7 @@
 
     // Call to local backend proxy
     async function callOllama(messages) {
-      const res = await fetch('http://localhost:3000/api/chat', {
+      const res = await fetch('http://141.69.58.30:11434', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: 'llama3.2:latest', messages })
