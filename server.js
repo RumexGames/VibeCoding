@@ -5,7 +5,9 @@ const fetch = require('node-fetch'); // Use: npm install node-fetch@2
 
 const app = express();
 const PORT = 3000;
-const url = 'http://141.69.58.30:11434'; // Ollama endpoint
+
+const url = 'http://localhost:11434/api/chat'; // Ollama endpoint
+
 
 // Middleware
 app.use(cors());
@@ -16,7 +18,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Chat API proxy
 app.post('/api/chat', async (req, res) => {
-  console.log("HURENSOHN");
 
   try {
     const { messages, model = 'llama3.2' } = req.body;
